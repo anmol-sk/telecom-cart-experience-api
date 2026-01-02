@@ -1,0 +1,559 @@
+{
+  "info": {
+    "name": "Telecom Cart Experience API",
+    "description": "Complete API collection for testing the Telecom Cart Experience API. Includes all endpoints with example requests and tests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["health"]
+        },
+        "description": "Health check endpoint to verify the API is running"
+      },
+      "response": []
+    },
+    {
+      "name": "1. Create Cart (Empty)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Parse response",
+              "var jsonData = pm.response.json();",
+              "",
+              "// Save cartId for use in subsequent requests",
+              "pm.environment.set(\"cartId\", jsonData.data.cartId);",
+              "",
+              "// Tests",
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Cart has valid UUID\", function () {",
+              "    pm.expect(jsonData.data.cartId).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);",
+              "});",
+              "",
+              "pm.test(\"Cart is empty\", function () {",
+              "    pm.expect(jsonData.data.items).to.be.an('array').that.is.empty;",
+              "    pm.expect(jsonData.data.total).to.equal(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart"]
+        },
+        "description": "Create a new empty cart session. The cartId will be saved for subsequent requests."
+      },
+      "response": []
+    },
+    {
+      "name": "2. Create Cart (With Metadata)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "pm.environment.set(\"cartId\", jsonData.data.cartId);",
+              "",
+              "pm.test(\"Status code is 201\", function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test(\"Metadata is preserved\", function () {",
+              "    pm.expect(jsonData.data.metadata.customerId).to.equal(\"cust-12345\");",
+              "    pm.expect(jsonData.data.metadata.channel).to.equal(\"web\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metadata\": {\n    \"customerId\": \"cust-12345\",\n    \"channel\": \"web\",\n    \"source\": \"homepage\"\n  }\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart"]
+        },
+        "description": "Create a cart with metadata for tracking customer, channel, and source"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Get Cart",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}"]
+        },
+        "description": "Retrieve cart details. Use {{cartId}} from environment variable saved from create cart request."
+      },
+      "response": []
+    },
+    {
+      "name": "4. Add Item - 5G Plan (Qty 1)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test(\"Item added to cart\", function () {",
+              "    pm.expect(jsonData.data.items).to.have.lengthOf(1);",
+              "});",
+              "",
+              "pm.test(\"Pricing is correct\", function () {",
+              "    pm.expect(jsonData.data.subtotal).to.equal(75);",
+              "    pm.expect(jsonData.data.tax).to.equal(6.75);",
+              "    pm.expect(jsonData.data.total).to.equal(81.75);",
+              "});",
+              "",
+              "// Save first itemId",
+              "pm.environment.set(\"itemId\", jsonData.data.items[0].itemId);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"productId\": \"prod-5g-unlimited\",\n    \"name\": \"5G Unlimited Plan\",\n    \"description\": \"Unlimited data, talk, and text\",\n    \"price\": 75.00,\n    \"category\": \"plan\"\n  },\n  \"quantity\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items"]
+        },
+        "description": "Add a 5G plan to the cart. Expected: $75 + $6.75 tax = $81.75"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Add Item - iPhone 15 Pro",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Two items in cart\", function () {",
+              "    pm.expect(jsonData.data.items).to.have.lengthOf(2);",
+              "});",
+              "",
+              "pm.test(\"Multi-item pricing is correct\", function () {",
+              "    pm.expect(jsonData.data.subtotal).to.equal(1074.99);",
+              "    pm.expect(jsonData.data.tax).to.equal(96.75);",
+              "    pm.expect(jsonData.data.total).to.equal(1171.74);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"productId\": \"prod-iphone-15-pro\",\n    \"name\": \"iPhone 15 Pro\",\n    \"description\": \"256GB Natural Titanium\",\n    \"price\": 999.99,\n    \"category\": \"device\"\n  },\n  \"quantity\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items"]
+        },
+        "description": "Add iPhone to cart. Expected total: $1074.99 + $96.75 tax = $1171.74"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Add Same Item Again (Merge Test)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Still two items (merged, not added)\", function () {",
+              "    pm.expect(jsonData.data.items).to.have.lengthOf(2);",
+              "});",
+              "",
+              "pm.test(\"Quantity merged correctly\", function () {",
+              "    var planItem = jsonData.data.items.find(item => item.product.productId === 'prod-5g-unlimited');",
+              "    pm.expect(planItem.quantity).to.equal(2);",
+              "    pm.expect(planItem.totalPrice).to.equal(150);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"productId\": \"prod-5g-unlimited\",\n    \"name\": \"5G Unlimited Plan\",\n    \"description\": \"Unlimited data, talk, and text\",\n    \"price\": 75.00,\n    \"category\": \"plan\"\n  },\n  \"quantity\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items"]
+        },
+        "description": "Add the same 5G plan again. Should merge quantities (qty 1 + qty 1 = qty 2), not create duplicate item."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Update Item Quantity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Quantity updated\", function () {",
+              "    var item = jsonData.data.items.find(i => i.itemId === pm.environment.get('itemId'));",
+              "    pm.expect(item.quantity).to.equal(3);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"quantity\": 3\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items/{{itemId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items", "{{itemId}}"]
+        },
+        "description": "Update quantity of an existing item to 3"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Remove Item from Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Item removed\", function () {",
+              "    pm.expect(jsonData.data.items).to.have.lengthOf(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items/{{itemId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items", "{{itemId}}"]
+        },
+        "description": "Remove an item from the cart"
+      },
+      "response": []
+    },
+    {
+      "name": "9. Delete Cart",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {",
+              "    pm.response.to.have.status(204);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}"]
+        },
+        "description": "Delete the entire cart session"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Invalid Quantity (0)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error code is VALIDATION_ERROR\", function () {",
+              "    pm.expect(jsonData.error.code).to.equal('VALIDATION_ERROR');",
+              "});",
+              "",
+              "pm.test(\"Error message mentions quantity\", function () {",
+              "    pm.expect(jsonData.error.message).to.include('Quantity');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"productId\": \"prod-test\",\n    \"name\": \"Test Product\",\n    \"price\": 10.00,\n    \"category\": \"addon\"\n  },\n  \"quantity\": 0\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items"]
+        },
+        "description": "Test validation error: quantity must be at least 1. Expected: 400 Bad Request"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Invalid Quantity (100)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error mentions maximum\", function () {",
+              "    pm.expect(jsonData.error.message).to.include('99');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"product\": {\n    \"productId\": \"prod-test\",\n    \"name\": \"Test Product\",\n    \"price\": 10.00,\n    \"category\": \"addon\"\n  },\n  \"quantity\": 100\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/{{cartId}}/items",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "{{cartId}}", "items"]
+        },
+        "description": "Test validation error: quantity cannot exceed 99. Expected: 400 Bad Request"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Cart Not Found (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 404\", function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "pm.test(\"Error code is RESOURCE_NOT_FOUND\", function () {",
+              "    pm.expect(jsonData.error.code).to.equal('RESOURCE_NOT_FOUND');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/550e8400-e29b-41d4-a716-446655440000",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "550e8400-e29b-41d4-a716-446655440000"]
+        },
+        "description": "Test 404 error for non-existent cart. Expected: 404 Not Found"
+      },
+      "response": []
+    },
+    {
+      "name": "Error: Invalid Cart ID Format",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var jsonData = pm.response.json();",
+              "",
+              "pm.test(\"Status code is 400\", function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test(\"Error mentions UUID format\", function () {",
+              "    pm.expect(jsonData.error.message).to.include('UUID');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3000/v1/cart/invalid-cart-id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["v1", "cart", "invalid-cart-id"]
+        },
+        "description": "Test validation error for invalid UUID format. Expected: 400 Bad Request"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}
+
+
+
